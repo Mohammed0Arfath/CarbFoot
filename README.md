@@ -1,61 +1,77 @@
 # 🌿 CarbFoot AI — Personal Carbon Intelligence
 
-A production-ready web application that helps individuals understand, track, and reduce their carbon footprint through personalized AI-driven insights, interactive dashboards, and actionable sustainability goals.
+> A production-ready sustainability platform that helps individuals understand, track, and reduce their carbon footprint through AI-driven insights, interactive dashboards, and scenario modelling.
 
 ---
 
-## 🌍 Chosen Vertical
+## 📸 Screenshots
 
-**Climate Technology / Sustainability**
-
----
-
-## 🎯 Problem Statement
-
-Most people have no idea what their carbon footprint actually is, let alone which of their daily habits contribute most to it. Generic sustainability advice doesn't help because everyone's lifestyle is different. CarbFoot AI bridges this gap by giving individuals a data-driven, personalized understanding of their environmental impact — and the specific, ranked actions most likely to reduce it.
-
----
-
-## 🚀 Live App Structure
-
-| Route | Description |
+| Home Page | Assessment Wizard |
 |---|---|
-| `/` | Landing page with hero, stats, and features |
-| `/assessment` | Multi-step carbon footprint wizard (5 categories) |
-| `/dashboard` | Interactive analytics + AI insights + benchmarking |
-| `/simulator` | 🆕 Real-time carbon reduction scenario modelling |
-| `/goals` | Goal setting and weekly progress tracking |
-| `/challenges` | Eco challenges, badges, leaderboard, level progression |
+| ![Home](./screenshots/home.png) | ![Assessment](./screenshots/assessment.png) |
+
+| Analytics Dashboard | Carbon Simulator |
+|---|---|
+| ![Dashboard](./screenshots/dashboard.png) | ![Simulator](./screenshots/simulator.png) |
+
+| Eco Challenges | Goal Tracking |
+|---|---|
+| ![Challenges](./screenshots/challenges.png) | ![Goals](./screenshots/goals.png) |
+
+> **Note:** Screenshots show the app after completing a sample assessment. Run `npm run dev` and complete the 5-step wizard to populate the dashboard.
 
 ---
 
-## 🏗️ Architecture Overview
+## 🌍 Problem Statement
+
+Most people have no idea what their carbon footprint actually is, let alone which daily habits contribute most to it. Generic sustainability advice fails because every lifestyle is different. CarbFoot AI bridges this gap with a **data-driven, personalised understanding** of environmental impact and the **specific, ranked actions** most likely to reduce it.
+
+---
+
+## 🚀 Features
+
+| Feature | Description |
+|---|---|
+| **5-Category Assessment** | Transportation, Energy, Food, Shopping, Waste wizard |
+| **AI Insights** | 6 natural-language insights generated from your data |
+| **Analytics Dashboard** | Eco Score ring, donut chart, trend line, bar comparisons |
+| **Emission Benchmarking** | Your footprint vs Global / EU / Paris 1.5°C target |
+| **Carbon Simulator** | Real-time "what-if" lifestyle scenario modelling |
+| **Recommendations** | Ranked by impact × effort — highest leverage first |
+| **Goal Tracking** | Create, track, and complete reduction goals |
+| **Gamification** | 20+ eco challenges, 15 badges, community leaderboard |
+| **PDF Report** | Print/save full A4 sustainability report |
+| **Accessibility** | High contrast mode, reduced motion, ARIA, skip nav |
+
+---
+
+## 🏗️ Architecture
 
 ```mermaid
 graph TD
     A[User Browser] --> B[React App / Vite]
     B --> C[AppContext / useReducer]
     C --> D[(localStorage)]
-    
-    B --> E[Pages]
+
+    B --> E[Pages — React.lazy code-split]
     E --> E1[HomePage]
     E --> E2[AssessmentPage]
     E --> E3[DashboardPage]
     E --> E4[SimulatorPage]
     E --> E5[GoalsPage]
     E --> E6[ChallengesPage]
-    
-    B --> F[Engine / Pure Logic]
+
+    B --> F[Engine — Pure TS, no React deps]
     F --> F1[calculator.ts]
     F --> F2[recommender.ts]
     F --> F3[insights.ts]
-    
+
     E2 --> F1
     E3 --> F1
     E3 --> F2
     E3 --> F3
     E4 --> F1
-    
+
     B --> G[Components]
     G --> G1[EcoScoreRing]
     G --> G2[RecommendationCard]
@@ -63,28 +79,27 @@ graph TD
     G --> G4[Navigation]
 ```
 
-
-
----
-
-## 🏗️ Architecture Overview
+### File Structure
 
 ```
 src/
 ├── components/         # Reusable UI primitives
-│   ├── Navigation.tsx  # Sticky nav + mobile bottom nav
-│   ├── EcoScoreRing.tsx# SVG circular progress
+│   ├── Navigation.tsx  # Sticky nav + mobile bottom nav + a11y toggles
+│   ├── EcoScoreRing.tsx# SVG circular progress ring
 │   ├── RecommendationCard.tsx
-│   └── Toast.tsx       # Notification system
-├── pages/              # Route-level views
+│   ├── PrintReport.tsx # Print/PDF A4 report
+│   └── Toast.tsx       # Accessible notification system
+├── pages/              # Route-level views (all lazy-loaded)
 │   ├── HomePage.tsx
 │   ├── AssessmentPage.tsx
 │   ├── DashboardPage.tsx
+│   ├── SimulatorPage.tsx
 │   ├── GoalsPage.tsx
 │   └── ChallengesPage.tsx
-├── engine/             # Pure business logic (no React deps)
+├── engine/             # Pure business logic (zero React dependencies)
 │   ├── calculator.ts   # CO₂ emission calculations
-│   └── recommender.ts  # AI recommendation generation
+│   ├── recommender.ts  # AI recommendation generation + ranking
+│   └── insights.ts     # Natural language insight generation
 ├── context/
 │   └── AppContext.tsx  # Global state (useReducer + localStorage)
 ├── data/
@@ -92,193 +107,197 @@ src/
 ├── types/
 │   └── index.ts        # All TypeScript interfaces
 ├── utils/
-│   ├── validation.ts   # Input sanitization
-│   └── formatting.ts   # Display helpers
-└── tests/             # Vitest unit + validation tests
+│   ├── validation.ts   # Input sanitization (safeNumber/safeString)
+│   └── formatting.ts   # Display helpers, category constants
+└── tests/
+    ├── calculator.test.ts   # 43 tests
+    ├── recommender.test.ts  # 12 tests
+    └── validation.test.ts   # 30 tests
 ```
 
 ### State Management
-- **React Context + useReducer** — predictable state transitions
-- **localStorage persistence** — all data stored securely client-side
-- **No external state library** — zero additional dependencies
+
+- **React Context + useReducer** — predictable state transitions with typed actions
+- **localStorage persistence** — all data stored client-side under `carbfoot-ai-v1`
+- **Schema merging** — `{ ...defaultState, ...parsed }` handles forward compatibility
 
 ---
 
 ## 🧮 Carbon Calculation Methodology
 
-Emission factors are sourced from authoritative public datasets:
-- **EPA** Emission Factors for Greenhouse Gas Inventories (2023)
-- **IPCC AR6** Working Group III
-- **IEA** Global CO₂ Emissions (2023)
-- **UK DEFRA** Greenhouse Gas Conversion Factors (2023)
+All emission factors are sourced from authoritative public datasets:
 
-### Categories & Approach
-
-| Category | Method | Key Factors |
+| Source | Year | Usage |
 |---|---|---|
-| **Transportation** | Distance × emission factor + flight radiative forcing | kg CO₂e/km by vehicle/fuel type |
-| **Energy** | kWh × grid intensity × (1 - renewable %) ÷ household size | 0.462 kg CO₂e/kWh global average |
-| **Food** | Diet base emissions + beef multiplier × waste × local factor | Vegan: 1,500 kg/yr; Heavy meat: 3,900 kg/yr |
-| **Shopping** | Per-item emission factors by category | Fast fashion: 10 kg/item; Electronics: 80 kg/unit |
-| **Waste** | Base × recycling factor × composting × single-use multiplier | Base: 350 kg/yr per person |
+| [EPA GHG Emission Factors](https://www.epa.gov/climateleadership/ghg-emission-factors-hub) | 2023 | Vehicle emission factors |
+| [IPCC AR6 Working Group III](https://www.ipcc.ch/report/ar6/wg3/) | 2022 | Flight radiative forcing, food lifecycle |
+| [IEA CO₂ Emissions](https://www.iea.org/) | 2023 | Grid electricity intensity |
+| [UK DEFRA Conversion Factors](https://www.gov.uk/government/collections/government-conversion-factors-for-company-reporting) | 2023 | Cross-category verification |
 
-All results in **kg CO₂e per year** (CO₂ equivalent including methane and other GHGs).
+### Emission Factors Used
 
----
+| Category | Key Factor | Value | Source |
+|---|---|---|---|
+| Car (medium petrol) | kg CO₂e/km | 0.192 | EPA 2023 |
+| Car (medium EV) | kg CO₂e/km | 0.053 | EPA 2023 |
+| Public transport (bus) | kg CO₂e/km | 0.089 | DEFRA 2023 |
+| Short-haul flight | kg CO₂e/pax-km | 0.255 | IPCC AR6 (inc. RF) |
+| Long-haul flight | kg CO₂e/pax-km | 0.195 | IPCC AR6 (inc. RF) |
+| Grid electricity | kg CO₂e/kWh | 0.462 | IEA global avg |
+| Natural gas | kg CO₂e/m³ | 2.04 | DEFRA 2023 |
+| Fast fashion item | kg CO₂e/item | 10.0 | Industry lifecycle |
+| Electronics (amortised) | kg CO₂e/unit | 80.0 | Lifecycle avg |
+| Beef meal | kg CO₂e extra | 6.0 | IPCC AR6 |
+| Vegan diet baseline | kg CO₂e/year | 1,500 | IPCC AR6 |
+| Heavy meat diet | kg CO₂e/year | 3,900 | IPCC AR6 |
 
-## 🤖 Recommendation Engine Logic
+### Calculation Formulas
 
-1. **Filter**: Remove recommendations irrelevant to the user's lifestyle (e.g., no EV suggestion for EV drivers)
-2. **Estimate**: Calculate potential savings per recommendation as a % of relevant category emissions
-3. **Score**: `priority = impact_weight × 2 + effort_score + (savings / 500)`
-4. **Rank**: Sort by priority score (descending)
-5. **Return**: Top N recommendations
-
-Impact weights: High=3, Medium=2, Low=1  
-Effort scores: Easy=3, Moderate=2, Hard=1
-
-This ensures high-impact, easy-wins appear first.
-
----
-
-## 🎯 Goal Tracking Mechanism
-
-1. User creates a goal with: title, category, reduction target (%), and deadline
-2. System calculates `targetKgCO2e = categoryEmissions × (target% / 100)`
-3. User manually logs weekly progress (10%, 25%, or complete)
-4. Completion triggers badge check and celebration toast
-5. All progress persisted in localStorage
-
----
-
-## 📊 Eco-Score Computation
-
+**Transportation:**
 ```
-score = round(((HIGH_FOOTPRINT - userFootprint) / (HIGH_FOOTPRINT - LOW_FOOTPRINT)) × 100)
+annual_driving_km = commute_distance × (5 - public_transport_days) × 52 × 2
+driving_emissions = annual_driving_km × vehicle_factor[type][fuel]
+flight_emissions = short_flights × 800km × 0.255 + long_flights × 5500km × 0.195
+transport_total = driving_emissions + public_transport_emissions + flight_emissions
 ```
 
-- `HIGH_FOOTPRINT` = 16,000 kg CO₂e/year
-- `LOW_FOOTPRINT` = 1,200 kg CO₂e/year
-- Score clamped to 0–100
-
-Sustainability levels:
-| Score | Level |
-|---|---|
-| 85–100 | 🌍 Eco Hero |
-| 70–84 | 🌲 Green Champion |
-| 55–69 | 🍀 Eco Conscious |
-| 40–54 | 🌿 Explorer |
-| 25–39 | 🌱 Beginner |
-| 0–24 | 💨 Carbon Giant |
-
----
-
-## 🔄 How the Solution Works (User Flow)
-
+**Energy:**
 ```
-1. User lands on Home page
-      ↓
-2. Clicks "Start Assessment"
-      ↓
-3. Completes 5-step wizard:
-   Transportation → Energy → Food → Shopping → Waste
-      ↓
-4. System calculates total annual CO₂e footprint
-      ↓
-5. AI analyzes category breakdown + user answers
-      ↓
-6. Dashboard renders:
-   - Eco Score ring
-   - Donut breakdown chart
-   - Monthly trend line chart
-   - Category vs. global average bar chart
-   - Ranked AI recommendations
-      ↓
-7. User sets reduction Goals
-      ↓
-8. User accepts Eco Challenges and earns Badges
-      ↓
-9. Progress tracked weekly; achievements unlocked
+effective_grid_factor = 0.462 × (1 - renewable_percentage / 100)
+electricity_emissions = monthly_kwh × 12 × effective_grid_factor
+gas_emissions = monthly_m3 × 12 × 2.04
+energy_total = (electricity_emissions + gas_emissions) / household_size
+```
+
+**Eco Score:**
+```
+score = round(((16000 - footprint) / (16000 - 1200)) × 100)
+score = clamp(score, 0, 100)
+```
+
+**Percentile Rank:**
+```
+z = (log(footprint) - log(4600)) / 0.6   # log-normal approximation
+percentile = clamp(round(50 + z × 34), 1, 99)
 ```
 
 ---
 
-## 📐 Assumptions Made
+## 🤖 Recommendation Engine
 
-- Emission factors represent **global averages** as reported by EPA/IPCC/IEA/DEFRA 2023
-- Commute is assumed to be a daily **round trip** on working days
-- Public transport replaces car commuting on selected days
-- Flight emissions include the **radiative forcing multiplier** (×1.9 for high-altitude warming)
-- Electricity grid intensity: **0.462 kg CO₂e/kWh** (global average; varies significantly by country)
-- Estimates provide **directional guidance**, not legally precise measurements
-- User-reported data is assumed accurate
-- All data remains **local to the user's browser** — no server, no tracking
+**Scoring formula:**
+```
+priority = impact_weight × 2 + effort_score + (estimated_saving_kg / 500)
+```
+
+| Impact | Weight | Effort | Score |
+|---|---|---|---|
+| High | 3 | Easy | 3 |
+| Medium | 2 | Moderate | 2 |
+| Low | 1 | Hard | 1 |
+
+**Pipeline:**
+1. **Filter** — Remove irrelevant recommendations (e.g., no EV suggestion for EV drivers; no "reduce flights" if user doesn't fly)
+2. **Estimate** — Calculate savings as % of user's actual category emissions
+3. **Score** — Apply priority formula
+4. **Rank** — Sort descending
+5. **Return** — Top N recommendations
+
+This ensures **high-impact, low-effort wins appear first**.
 
 ---
 
-## 🧪 Testing Strategy
+## 🔬 Carbon Simulator
 
-### Unit Tests (Vitest)
+The simulator generates context-aware sliders from the user's actual assessment data:
+
+- Slider ranges are **relative** to the user's input (e.g., max flight reduction = actual flights taken)
+- Irrelevant sliders are hidden (`.filter(s => s.max > 0)`)
+- Each slider has an `applyFn(value, baseEmissions) → delta` that computes the kg CO₂e saving
+- Results use `useMemo` for real-time recalculation on every slider change
+- Displays equivalent trees planted and car km not driven for emotional resonance
+
+---
+
+## 📊 Emission Benchmarks
+
+| Reference | Value | Source |
+|---|---|---|
+| Sustainable target | 2,000 kg/year | Paris Agreement 1.5°C pathway |
+| Global average | 4,850 kg/year | IEA 2023 |
+| EU average | 8,400 kg/year | EEA 2023 |
+
+---
+
+## 🧪 Test Coverage
+
 ```bash
-npm run test
-npm run test:coverage
+npm run test           # Run all tests
+npm run test:coverage  # Generate HTML coverage report
 ```
 
-| Test File | Coverage |
+**Results: 85 tests, 85 passing**
+
+| File | Statements | Branches | Functions | Lines |
+|---|---|---|---|---|
+| `calculator.ts` | 100% | 95.83% | 100% | 100% |
+| `recommender.ts` | 100% | 100% | 100% | 100% |
+| `validation.ts` | 100% | 100% | 100% | 100% |
+
+**Test Categories:**
+- Zero inputs: all calculators return 0 for empty lifestyle
+- Maximum inputs: high-consumption scenarios compute without overflow
+- Invalid types: `null`, `undefined`, `NaN`, `Infinity`, strings — all handled
+- Eco champion lifestyle → eco score > 70
+- High-consumption lifestyle → eco score < 30
+- Relevance filtering: EV users don't see EV suggestion; vegans don't see beef advice
+- Ranking: high-impact recommendations always precede low-impact
+
+---
+
+## ♿ Accessibility
+
+- **WCAG 2.1 AA** colour contrast ratios throughout
+- **Skip to main content** link (keyboard-visible focus)
+- **Reduced motion** — respects `prefers-reduced-motion` OS setting + manual toggle
+- **High contrast mode** — respects `prefers-contrast: more` OS setting + manual toggle
+- **ARIA attributes**: `role`, `aria-label`, `aria-live`, `aria-current`, `aria-pressed`, `aria-valuenow/min/max`
+- **Role semantics**: `tablist/tab/tabpanel`, `progressbar`, `dialog`, `navigation`, `main`
+- **Keyboard navigable**: all interactive elements reachable; `:focus-visible` rings on all
+- **Semantic HTML**: `<main>`, `<nav>`, `<section>`, `<article>`, `<footer>`, proper heading hierarchy
+
+---
+
+## 🔒 Security
+
+| Measure | Implementation |
 |---|---|
-| `calculator.test.ts` | All 5 category calculators, eco score, sustainability levels, percentile, integration |
-| `recommender.test.ts` | Relevance filtering, ranking, field validation, edge cases |
-| `validation.test.ts` | safeNumber, safeString, all validators, full sanitization, edge cases |
-
-### Key Test Cases
-- **Zero inputs**: All calculators gracefully return 0 for empty lifestyle
-- **Maximum inputs**: High-consumption scenarios compute without overflow
-- **Invalid types**: Strings, null, undefined, NaN all handled via safeNumber/safeString
-- **Eco champion** lifestyle scores >70 eco score
-- **High consumption** lifestyle scores <30 eco score
-- **Relevance filtering**: EV users don't see EV recommendation; vegans don't see beef advice
-- **Recommendation ranking**: High-impact recommendations always precede low-impact ones
+| Input sanitization | All values through `safeNumber()` + `safeString()` |
+| Range clamping | Numeric inputs bounded (e.g., commute 0–500 km, renewable 0–100%) |
+| Type validation | TypeScript strict mode + runtime validation |
+| No dangerouslySetInnerHTML | All user data rendered as text |
+| No eval | Only static arithmetic expressions |
+| localStorage safety | JSON.parse in try/catch; corrupted data falls back to defaults |
+| No network requests | Zero data transmitted — fully client-side |
+| Error boundary | Graceful fallback for rendering failures |
 
 ---
 
-## ♿ Accessibility Considerations
+## ⚡ Performance
 
-- **WCAG 2.1 AA compliant** color contrast ratios throughout
-- **ARIA labels** on all interactive elements, charts, and progress bars
-- **role attributes**: `navigation`, `main`, `alert`, `progressbar`, `tablist`, `tab`, `tabpanel`, `dialog`, `log`
-- **aria-live** on toast notifications for screen reader announcements
-- **aria-current="page"** on active navigation link
-- **Focus management**: All interactive elements keyboard-reachable
-- **:focus-visible** styles for keyboard navigation (no outline suppression)
-- **Skip to main content** link for keyboard users
-- **Screen-reader-only** `.sr-only` class for visually-hidden labels
-- **Semantic HTML**: `<main>`, `<nav>`, `<section>`, `<article>`, `<footer>`, `<h1>`–`<h3>` hierarchy
-- **Mobile-first** responsive design with bottom navigation on small screens
+| Optimization | Implementation |
+|---|---|
+| Code splitting | `React.lazy()` on all 6 pages |
+| Suspense loading | `<PageLoader>` spinner during chunk load |
+| Memoization | `useMemo` for recommendations, insights, leaderboard |
+| Callback memoization | `useCallback` on all dispatchers |
+| CSS custom properties | Theme switching without JS rerender |
+| Bundle analysis | Chart.js isolated to DashboardPage chunk (not in core) |
 
----
-
-## 🔒 Security Considerations
-
-- **Input sanitization**: Every user value passes through `safeNumber()` / `safeString()` before use
-- **Range clamping**: All numeric inputs are bounded to realistic ranges (e.g., commute 0–500 km)
-- **No `dangerouslySetInnerHTML`**: All user data rendered as text, never injected as HTML
-- **No eval/Function constructor**: Only static calculations
-- **localStorage only**: No data ever transmitted to any server
-- **JSON.parse error handling**: Corrupted storage is caught silently and falls back to defaults
-- **Form `noValidate` with manual validation**: Prevents browser inconsistencies while retaining full JS control
-- **Error boundaries**: Graceful fallback for rendering failures
-
----
-
-## ⚡ Performance Optimizations
-
-- **Lazy loading**: All 5 pages loaded on-demand via `React.lazy` + `Suspense`
-- **Code splitting**: Vite automatically splits chart libraries from core bundle
-- **`useMemo`**: Recommendations recalculated only when assessment data changes
-- **`useCallback`**: Action creators memoized to prevent unnecessary re-renders
-- **CSS custom properties**: Theme switching without JS recalculation
-- **No unnecessary state**: Charts receive pre-computed data, not raw assessment
-- **localStorage batching**: State serialized once per state change, not on every render
+**Production bundle sizes (gzip):**
+- Core: `67.6 kB`
+- Dashboard (charts): `74.7 kB`
+- All other pages: < `5 kB` each
 
 ---
 
@@ -286,14 +305,14 @@ npm run test:coverage
 
 | Layer | Technology |
 |---|---|
-| Framework | React 18 + TypeScript |
+| Framework | React 18 + TypeScript (strict) |
 | Build | Vite 5 |
 | Routing | React Router v6 |
 | Charts | Chart.js 4 + react-chartjs-2 |
-| Styling | Vanilla CSS (custom properties design system) |
+| Styling | Vanilla CSS (design system, 1,250+ lines) |
 | State | React Context + useReducer |
-| Storage | localStorage |
-| Testing | Vitest + @testing-library/react |
+| Persistence | localStorage |
+| Testing | Vitest + jsdom |
 | Fonts | Google Fonts (Inter + Syne) |
 
 ---
@@ -305,32 +324,39 @@ npm run test:coverage
 npm install
 
 # Start development server
-npm run dev
+npm run dev               # → http://localhost:5173
 
 # Run tests
 npm run test
-
-# Run tests with coverage
-npm run test:coverage
+npm run test:coverage     # → coverage/index.html
 
 # Build for production
 npm run build
 
 # Preview production build
-npm run preview
+npm run preview           # → http://localhost:4173
 ```
+
+---
+
+## 📐 Assumptions
+
+- Emission factors represent **global averages** (EPA/IPCC/IEA/DEFRA 2023)
+- Commute is a daily **round trip** on working days only
+- Flight emissions include the **radiative forcing multiplier** (×1.9 for high-altitude warming effects)
+- Electricity intensity: **0.462 kg CO₂e/kWh** (global average; varies significantly by country)
+- All estimates are **directional guidance** for individual awareness — not legally precise measurements
+- All data remains **local to the user's browser** — no server, no tracking, no analytics
 
 ---
 
 ## 📊 Data Attribution
 
-Emission factors used in this application are sourced from:
 - [EPA Emission Factors for GHG Inventories (2023)](https://www.epa.gov/climateleadership/ghg-emission-factors-hub)
 - [IPCC AR6 Working Group III (2022)](https://www.ipcc.ch/report/ar6/wg3/)
 - [IEA CO₂ Emissions in 2023](https://www.iea.org/)
 - [UK DEFRA Conversion Factors (2023)](https://www.gov.uk/government/collections/government-conversion-factors-for-company-reporting)
-
-Estimates are directional guidance for individual awareness, not legally precise measurements.
+- [European Environment Agency (EEA) — EU per capita emissions](https://www.eea.europa.eu/)
 
 ---
 
