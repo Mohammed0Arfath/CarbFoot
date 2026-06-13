@@ -10,6 +10,7 @@ const AssessmentPage  = lazy(() => import('@/pages/AssessmentPage'));
 const DashboardPage   = lazy(() => import('@/pages/DashboardPage'));
 const GoalsPage       = lazy(() => import('@/pages/GoalsPage'));
 const ChallengesPage  = lazy(() => import('@/pages/ChallengesPage'));
+const SimulatorPage   = lazy(() => import('@/pages/SimulatorPage'));
 
 function PageLoader() {
   return (
@@ -54,6 +55,7 @@ export default function App() {
                 <Route path="/dashboard"  element={<DashboardPage />} />
                 <Route path="/goals"      element={<GoalsPage />} />
                 <Route path="/challenges" element={<ChallengesPage />} />
+                <Route path="/simulator"  element={<SimulatorPage />} />
                 <Route path="*"           element={<NotFound />} />
               </Routes>
             </Suspense>

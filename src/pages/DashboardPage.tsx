@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Chart as ChartJS,
@@ -10,12 +10,15 @@ import {
 import { Doughnut, Line, Bar } from 'react-chartjs-2';
 import { useApp } from '@/context/AppContext';
 import { generateRecommendations } from '@/engine/recommender';
+import { generateInsights } from '@/engine/insights';
 import {
   formatCO2, formatCO2Short, formatMonth,
   CATEGORY_LABELS, CATEGORY_COLORS, CATEGORY_ICONS,
 } from '@/utils/formatting';
 import EcoScoreRing from '@/components/EcoScoreRing';
 import RecommendationCard from '@/components/RecommendationCard';
+import PrintReport from '@/components/PrintReport';
+import type { CategoryEmissions } from '@/types';
 
 ChartJS.register(
   ArcElement, Tooltip, Legend,
@@ -48,24 +51,41 @@ const CHART_DEFAULTS = {
   },
 };
 
-// Global average for comparison chart
-const GLOBAL_AVERAGES = {
+// Benchmark reference values (kg CO₂e/year)
+const GLOBAL_AVERAGES: CategoryEmissions = {
   transportation: 1800,
-  energy: 1100,
-  food: 2000,
-  shopping: 600,
-  waste: 350,
+  energy:         1100,
+  food:           2000,
+  shopping:       600,
+  waste:          350,
+};
+
+const GLOBAL_TOTAL = Object.values(GLOBAL_AVERAGES).reduce((a, b) => a + b, 0); // 5850
+const EU_AVERAGE = 8400;      // kg CO₂e — EU average
+const SUSTAINABLE_TARGET = 2000; // kg CO₂e — 1.5°C-compatible
+
+const INSIGHT_TYPE_STYLES = {
+  warning:     { bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.25)', icon_color: '#f87171' },
+  opportunity: { bg: 'rgba(251,191,36,0.08)',  border: 'rgba(251,191,36,0.25)',  icon_color: '#fbbf24' },
+  positive:    { bg: 'rgba(74,222,128,0.08)',  border: 'rgba(74,222,128,0.25)',  icon_color: '#4ade80' },
+  info:        { bg: 'rgba(96,165,250,0.08)',  border: 'rgba(96,165,250,0.25)',  icon_color: '#60a5fa' },
 };
 
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { state } = useApp();
+  const [showPrintReport, setShowPrintReport] = useState(false);
 
   const { carbonResult, assessmentData, monthlyHistory } = state;
 
   const recommendations = useMemo(() => {
     if (!assessmentData || !carbonResult) return [];
     return generateRecommendations(assessmentData, carbonResult.byCategory, 8);
+  }, [assessmentData, carbonResult]);
+
+  const insights = useMemo(() => {
+    if (!assessmentData || !carbonResult) return [];
+    return generateInsights(carbonResult, assessmentData);
   }, [assessmentData, carbonResult]);
 
   if (!state.hasCompletedAssessment || !carbonResult) {
@@ -147,6 +167,40 @@ export default function DashboardPage() {
   const highestCategory = categoryKeys.reduce((a, b) => byCategory[a] > byCategory[b] ? a : b);
   const totalSavingsPossible = recommendations.reduce((s, r) => s + r.estimatedSavingKgCO2e, 0);
 
+  // ── Benchmarks ────────────────────────────────────────────
+  const benchmarks = [
+    {
+      label: 'Your Footprint',
+      value: totalAnnualKgCO2e,
+      color: totalAnnualKgCO2e > GLOBAL_TOTAL ? '#f87171' : '#4ade80',
+      bg: totalAnnualKgCO2e > GLOBAL_TOTAL ? 'rgba(248,113,113,0.08)' : 'rgba(74,222,128,0.08)',
+      icon: '📍',
+    },
+    {
+      label: 'Global Average',
+      value: GLOBAL_TOTAL,
+      color: '#fbbf24',
+      bg: 'rgba(251,191,36,0.08)',
+      icon: '🌍',
+    },
+    {
+      label: 'EU Average',
+      value: EU_AVERAGE,
+      color: '#fb923c',
+      bg: 'rgba(251,146,60,0.08)',
+      icon: '🇪🇺',
+    },
+    {
+      label: '1.5°C Target',
+      value: SUSTAINABLE_TARGET,
+      color: '#22d3ee',
+      bg: 'rgba(34,211,238,0.08)',
+      icon: '🎯',
+    },
+  ];
+
+  const maxBenchmark = Math.max(...benchmarks.map(b => b.value)) * 1.05;
+
   return (
     <main id="main-content" className="page">
       <div className="container">
@@ -155,17 +209,36 @@ export default function DashboardPage() {
           <div>
             <h1 className="page-title font-display">Your Dashboard</h1>
             <p className="page-subtitle">
-              Annual carbon footprint breakdown and insights
+              Annual carbon footprint breakdown and AI insights
             </p>
           </div>
-          <button
-            className="btn btn-secondary"
-            onClick={() => navigate('/assessment')}
-            id="dashboard-retake"
-            aria-label="Retake carbon assessment"
-          >
-            <span aria-hidden="true">🔄</span> Retake Assessment
-          </button>
+          <div className="flex gap-2">
+            <button
+              className="btn btn-ghost"
+              onClick={() => setShowPrintReport(true)}
+              id="dashboard-download-report"
+              aria-label="Download sustainability report as PDF"
+            >
+              <span aria-hidden="true">📄</span> Export Report
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => navigate('/simulator')}
+              id="dashboard-simulator"
+              aria-label="Open carbon reduction simulator"
+            >
+              <span aria-hidden="true">🔬</span> Simulator
+            </button>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => navigate('/assessment')}
+              id="dashboard-retake"
+              aria-label="Retake carbon assessment"
+              style={{ fontSize: '0.8125rem' }}
+            >
+              🔄 Retake
+            </button>
+          </div>
         </div>
 
         {/* ── Top KPI row ─────────────────────────────────── */}
@@ -201,6 +274,69 @@ export default function DashboardPage() {
             <div className="stat-delta positive">if all recs applied</div>
           </div>
         </div>
+
+        {/* ── AI Insight Cards ─────────────────────────────── */}
+        <section aria-labelledby="insights-title" style={{ marginBottom: '1.5rem' }}>
+          <div className="flex justify-between items-center" style={{ marginBottom: '1rem' }}>
+            <h2
+              id="insights-title"
+              style={{ fontWeight: 800, fontSize: '1.125rem', letterSpacing: '-0.02em' }}
+            >
+              🤖 AI Insights
+            </h2>
+            <span className="badge badge-accent">{insights.length} insights</span>
+          </div>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+              gap: '0.875rem',
+            }}
+            role="list"
+            aria-label="AI-generated insights about your carbon footprint"
+          >
+            {insights.map((insight) => {
+              const styles = INSIGHT_TYPE_STYLES[insight.type];
+              return (
+                <article
+                  key={insight.id}
+                  style={{
+                    background: styles.bg,
+                    border: `1px solid ${styles.border}`,
+                    borderRadius: 'var(--radius-lg)',
+                    padding: '1rem 1.125rem',
+                    display: 'flex',
+                    gap: '0.875rem',
+                    alignItems: 'flex-start',
+                  }}
+                  role="listitem"
+                  aria-label={`Insight: ${insight.headline}`}
+                  className="animate-fade-in"
+                >
+                  <span
+                    style={{
+                      fontSize: '1.5rem',
+                      lineHeight: 1,
+                      flexShrink: 0,
+                      marginTop: '2px',
+                    }}
+                    aria-hidden="true"
+                  >
+                    {insight.icon}
+                  </span>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.9375rem', marginBottom: '0.375rem', lineHeight: 1.3 }}>
+                      {insight.headline}
+                    </div>
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+                      {insight.detail}
+                    </p>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
 
         {/* ── Main charts row ──────────────────────────────── */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
@@ -289,10 +425,131 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* ── Emission Benchmarking ─────────────────────────── */}
+        <section
+          className="card"
+          style={{ marginBottom: '1.25rem' }}
+          aria-labelledby="benchmark-title"
+        >
+          <div className="flex justify-between items-center" style={{ marginBottom: '1.5rem' }}>
+            <div>
+              <h2 id="benchmark-title" style={{ fontWeight: 700, fontSize: '1rem' }}>
+                📊 Emission Benchmarking
+              </h2>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                How your footprint compares to key reference levels
+              </p>
+            </div>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => navigate('/simulator')}
+              id="benchmark-try-simulator"
+              aria-label="Try the carbon reduction simulator"
+            >
+              <span aria-hidden="true">🔬</span> Simulate Reductions
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.75rem' }}>
+            {benchmarks.map(bm => (
+              <div
+                key={bm.label}
+                style={{
+                  background: bm.bg,
+                  border: `1px solid ${bm.color}30`,
+                  borderRadius: 'var(--radius-md)',
+                  padding: '1rem',
+                  textAlign: 'center',
+                }}
+                role="group"
+                aria-label={`${bm.label}: ${formatCO2(bm.value)}`}
+              >
+                <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }} aria-hidden="true">{bm.icon}</div>
+                <div style={{ fontSize: '1.375rem', fontWeight: 900, color: bm.color, letterSpacing: '-0.03em' }}>
+                  {formatCO2Short(bm.value)}
+                </div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                  {bm.label}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Horizontal comparison bars */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+            {benchmarks.map(bm => {
+              const pct = Math.min(100, Math.round((bm.value / maxBenchmark) * 100));
+              return (
+                <div key={bm.label}>
+                  <div className="flex justify-between items-center" style={{ marginBottom: '0.375rem' }}>
+                    <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                      <span aria-hidden="true">{bm.icon}</span> {bm.label}
+                    </span>
+                    <strong style={{ fontSize: '0.875rem', color: bm.color }}>{formatCO2(bm.value)}</strong>
+                  </div>
+                  <div
+                    className="progress-bar"
+                    role="progressbar"
+                    aria-valuenow={bm.value}
+                    aria-valuemin={0}
+                    aria-valuemax={Math.round(maxBenchmark)}
+                    aria-label={`${bm.label}: ${formatCO2(bm.value)}`}
+                    style={{ height: 10 }}
+                  >
+                    <div
+                      style={{
+                        width: `${pct}%`,
+                        height: '100%',
+                        background: bm.color,
+                        borderRadius: 'var(--radius-full)',
+                        transition: 'width 0.8s cubic-bezier(0.4,0,0.2,1)',
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Gap to target message */}
+          {totalAnnualKgCO2e > SUSTAINABLE_TARGET && (
+            <div
+              style={{
+                marginTop: '1.25rem',
+                padding: '0.875rem 1rem',
+                background: 'rgba(34,211,238,0.06)',
+                border: '1px solid rgba(34,211,238,0.2)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '0.875rem',
+              }}
+              role="note"
+              aria-label="Gap to Paris Agreement target"
+            >
+              <span style={{ color: 'var(--accent-400)', fontWeight: 700 }}>🌡️ Gap to 1.5°C target: </span>
+              <span style={{ color: 'var(--text-secondary)' }}>
+                You need to reduce by{' '}
+                <strong style={{ color: 'var(--text-primary)' }}>
+                  {formatCO2(totalAnnualKgCO2e - SUSTAINABLE_TARGET)}
+                </strong>
+                {' '}to reach the Paris Agreement sustainable level.{' '}
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ display: 'inline-flex', padding: '0 0.5rem', height: '1.5rem', fontSize: '0.875rem' }}
+                  onClick={() => navigate('/simulator')}
+                  id="benchmark-gap-simulator"
+                  aria-label="Use simulator to see how to close this gap"
+                >
+                  See how →
+                </button>
+              </span>
+            </div>
+          )}
+        </section>
+
         {/* ── Comparison bar chart ─────────────────────────── */}
         <div className="card" style={{ marginBottom: '1.25rem' }} aria-labelledby="comparison-title">
           <h2 id="comparison-title" style={{ fontWeight: 700, marginBottom: '0.5rem', fontSize: '1rem' }}>
-            Your Footprint vs. Global Average
+            Your Footprint vs. Global Average by Category
           </h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
             Largest contributor:{' '}
@@ -338,10 +595,10 @@ export default function DashboardPage() {
           <div className="flex justify-between items-center" style={{ marginBottom: '1.25rem' }}>
             <div>
               <h2 id="recs-title" style={{ fontWeight: 800, fontSize: '1.25rem', letterSpacing: '-0.02em' }}>
-                🤖 AI Recommendations
+                💡 Personalized Recommendations
               </h2>
               <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                Personalized actions ranked by impact × effort
+                Ranked by impact × effort — highest leverage first
               </p>
             </div>
             <span className="badge badge-brand">{recommendations.length} actions</span>
@@ -398,6 +655,11 @@ export default function DashboardPage() {
           </div>
         </section>
       </div>
+
+      {/* Print Report Modal */}
+      {showPrintReport && (
+        <PrintReport onClose={() => setShowPrintReport(false)} />
+      )}
     </main>
   );
 }

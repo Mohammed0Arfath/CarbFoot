@@ -21,10 +21,49 @@ Most people have no idea what their carbon footprint actually is, let alone whic
 | Route | Description |
 |---|---|
 | `/` | Landing page with hero, stats, and features |
-| `/assessment` | Multi-step carbon footprint wizard |
-| `/dashboard` | Interactive analytics + AI recommendations |
-| `/goals` | Goal setting and progress tracking |
-| `/challenges` | Eco challenges, badges, leaderboard |
+| `/assessment` | Multi-step carbon footprint wizard (5 categories) |
+| `/dashboard` | Interactive analytics + AI insights + benchmarking |
+| `/simulator` | 🆕 Real-time carbon reduction scenario modelling |
+| `/goals` | Goal setting and weekly progress tracking |
+| `/challenges` | Eco challenges, badges, leaderboard, level progression |
+
+---
+
+## 🏗️ Architecture Overview
+
+```mermaid
+graph TD
+    A[User Browser] --> B[React App / Vite]
+    B --> C[AppContext / useReducer]
+    C --> D[(localStorage)]
+    
+    B --> E[Pages]
+    E --> E1[HomePage]
+    E --> E2[AssessmentPage]
+    E --> E3[DashboardPage]
+    E --> E4[SimulatorPage]
+    E --> E5[GoalsPage]
+    E --> E6[ChallengesPage]
+    
+    B --> F[Engine / Pure Logic]
+    F --> F1[calculator.ts]
+    F --> F2[recommender.ts]
+    F --> F3[insights.ts]
+    
+    E2 --> F1
+    E3 --> F1
+    E3 --> F2
+    E3 --> F3
+    E4 --> F1
+    
+    B --> G[Components]
+    G --> G1[EcoScoreRing]
+    G --> G2[RecommendationCard]
+    G --> G3[PrintReport]
+    G --> G4[Navigation]
+```
+
+
 
 ---
 

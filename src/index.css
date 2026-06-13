@@ -1122,3 +1122,131 @@ h1, h2, h3, h4, h5, h6 { line-height: 1.2; font-weight: 600; }
   position: relative;
   width: 100%;
 }
+
+/* ── Flex helpers ────────────────────────────────────────────── */
+.flex-wrap { flex-wrap: wrap; }
+
+/* ── Reduced Motion Accessibility ───────────────────────────── */
+/**
+ * Respects both the OS-level prefers-reduced-motion setting AND
+ * the manual data-reduced-motion="true" attribute set by our toggle.
+ */
+@media (prefers-reduced-motion: reduce),
+       ([data-reduced-motion="true"]) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .progress-fill::after {
+    animation: none !important;
+  }
+}
+
+/* ── High Contrast Mode ──────────────────────────────────────── */
+/**
+ * Increases contrast ratios for users who need it.
+ * Triggered by: OS prefers-contrast OR our manual toggle.
+ */
+@media (prefers-contrast: more),
+       ([data-high-contrast="true"]) {
+  :root,
+  [data-theme="dark"] {
+    --text-primary:   #ffffff;
+    --text-secondary: #d4d4d4;
+    --text-muted:     #a8a8a8;
+    --border:         rgba(255,255,255,0.25);
+    --border-strong:  rgba(255,255,255,0.45);
+    --bg-card:        #0f1420;
+    --bg-elevated:    #1a2233;
+  }
+
+  [data-theme="light"] {
+    --text-primary:   #000000;
+    --text-secondary: #1a1a1a;
+    --text-muted:     #333333;
+    --border:         rgba(0,0,0,0.35);
+    --border-strong:  rgba(0,0,0,0.55);
+  }
+
+  .btn:focus-visible,
+  :focus-visible {
+    outline: 3px solid #ffff00;
+    outline-offset: 3px;
+  }
+
+  .card {
+    border-width: 2px;
+  }
+
+  .progress-bar {
+    border: 1px solid var(--border-strong);
+  }
+
+  .badge {
+    border-width: 2px;
+  }
+}
+
+/* ── Print Styles (for PDF export) ──────────────────────────── */
+@media print {
+  /* Hide all screen-only UI */
+  .nav,
+  .mobile-nav,
+  .modal-overlay,
+  .toast-container,
+  .skip-link,
+  button:not(.print-only),
+  #root > div > footer {
+    display: none !important;
+  }
+
+  /* Show print report */
+  #print-report {
+    display: block !important;
+  }
+
+  body {
+    background: white !important;
+    color: #0f172a !important;
+    font-size: 12pt;
+  }
+
+  /* Force colour rendering in print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  @page {
+    margin: 2cm;
+    size: A4;
+  }
+}
+
+/* ── Focus indicators (enhanced) ────────────────────────────── */
+/* Ensure all interactive elements have visible focus rings */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent-400);
+  outline-offset: 2px;
+}
+
+/* ── ARIA live region for announcements ──────────────────────── */
+.sr-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+}
+
