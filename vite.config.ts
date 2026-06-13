@@ -16,6 +16,14 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
+      // Scope coverage to business logic files with unit tests.
+      // React UI components (pages/, components/, App.tsx) are excluded —
+      // they require full browser rendering and are covered by manual QA.
+      include: [
+        'src/engine/**/*.ts',
+        'src/utils/**/*.ts',
+        'src/data/index.ts',
+      ],
     },
   },
 })

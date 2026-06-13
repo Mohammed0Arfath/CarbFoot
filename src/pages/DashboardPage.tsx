@@ -345,7 +345,7 @@ export default function DashboardPage() {
             <h2 id="breakdown-title" style={{ fontWeight: 700, marginBottom: '1.5rem', fontSize: '1rem' }}>
               Emission Breakdown
             </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
               <EcoScoreRing score={ecoScore} level={sustainabilityLevel} size={160} />
               <div className="chart-container" style={{ maxWidth: 220, margin: '0 auto' }}>
                 <Doughnut
@@ -367,6 +367,20 @@ export default function DashboardPage() {
                   aria-label="Donut chart showing carbon emission breakdown by category"
                 />
               </div>
+              {/* Accessible data table — screen reader alternative to chart */}
+              <table className="sr-only" aria-label="Carbon emission breakdown by category">
+                <caption>Your annual carbon footprint by category</caption>
+                <thead><tr><th scope="col">Category</th><th scope="col">kg CO₂e/year</th><th scope="col">% of total</th></tr></thead>
+                <tbody>
+                  {categoryKeys.map(k => (
+                    <tr key={k}>
+                      <td>{CATEGORY_LABELS[k]}</td>
+                      <td>{byCategory[k]}</td>
+                      <td>{Math.round((byCategory[k] / totalAnnualKgCO2e) * 100)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
               {/* Legend */}
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {categoryKeys.map(k => (
@@ -422,6 +436,19 @@ export default function DashboardPage() {
                 aria-label="Line chart showing monthly carbon footprint over the last 12 months"
               />
             </div>
+            {/* Accessible data table — screen reader alternative */}
+            <table className="sr-only" aria-label="Monthly carbon footprint data">
+              <caption>Monthly CO₂e emissions over the last 12 months</caption>
+              <thead><tr><th scope="col">Month</th><th scope="col">kg CO₂e</th></tr></thead>
+              <tbody>
+                {monthlyHistory.map((entry) => (
+                  <tr key={entry.month}>
+                    <td>{formatMonth(entry.month)}</td>
+                    <td>{entry.totalKgCO2e}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -588,6 +615,24 @@ export default function DashboardPage() {
               aria-label="Bar chart comparing your emissions to the global average by category"
             />
           </div>
+          {/* Accessible data table — screen reader alternative to bar chart */}
+          <table className="sr-only" aria-label="Category emissions compared to global average">
+            <caption>Your emissions vs. global average by category (kg CO₂e/year)</caption>
+            <thead><tr><th scope="col">Category</th><th scope="col">Your Footprint</th><th scope="col">Global Average</th><th scope="col">Difference</th></tr></thead>
+            <tbody>
+              {categoryKeys.map(k => (
+                <tr key={k}>
+                  <td>{CATEGORY_LABELS[k]}</td>
+                  <td>{byCategory[k]} kg</td>
+                  <td>{GLOBAL_AVERAGES[k]} kg</td>
+                  <td>{byCategory[k] > GLOBAL_AVERAGES[k]
+                    ? `+${byCategory[k] - GLOBAL_AVERAGES[k]} kg above average`
+                    : `${GLOBAL_AVERAGES[k] - byCategory[k]} kg below average`}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         {/* ── AI Recommendations ─────────────────────────── */}

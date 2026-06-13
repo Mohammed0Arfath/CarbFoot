@@ -7,6 +7,9 @@ dist/
 # Test coverage reports
 coverage/
 
+# Scratch/utility scripts
+copy-screenshots.cjs
+
 # Environment variables
 .env
 .env.local

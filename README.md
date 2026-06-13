@@ -236,13 +236,24 @@ npm run test           # Run all tests
 npm run test:coverage  # Generate HTML coverage report
 ```
 
-**Results: 85 tests, 85 passing**
+**Results: 108 tests, 108 passing**
 
-| File | Statements | Branches | Functions | Lines |
+Coverage is reported over the **business logic layer** (`engine/`, `utils/`, `data/`). React UI components require a full browser rendering environment and are verified through manual QA and Lighthouse audits.
+
+| File | % Stmts | % Branch | % Funcs | % Lines |
 |---|---|---|---|---|
-| `calculator.ts` | 100% | 95.83% | 100% | 100% |
-| `recommender.ts` | 100% | 100% | 100% | 100% |
-| `validation.ts` | 100% | 100% | 100% | 100% |
+| `engine/calculator.ts` | **100%** | 83.87% | **100%** | **100%** |
+| `engine/recommender.ts` | **100%** | 96.29% | **100%** | **100%** |
+| `engine/insights.ts` | 100% | 100% | 100% | 100% |
+| `utils/validation.ts` | **100%** | 95.83% | **100%** | **100%** |
+| `data/index.ts` | 91.99% | **100%** | 50% | 91.99% |
+
+| Test File | Tests | What's Covered |
+|---|---|---|
+| `calculator.test.ts` | 43 | All 5 emission categories, eco score, sustainability levels, percentile, integration |
+| `recommender.test.ts` | 12 | Relevance filtering, ranking, field validation, edge cases |
+| `validation.test.ts` | 30 | safeNumber/safeString, all validators, full sanitization, null/NaN/Infinity edge cases |
+| `integration.test.ts` | 23 | Assessment flow, localStorage save/restore, schema migration, state transitions, pipeline |
 
 **Test Categories:**
 - Zero inputs: all calculators return 0 for empty lifestyle
