@@ -8,7 +8,7 @@
  * - Edge cases: schema evolution, storage corruption
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import type { AppState, AssessmentData, Goal } from '@/types';
 import { calculateCarbonFootprint } from '@/engine/calculator';
 import { sanitizeAssessmentData } from '@/utils/validation';
@@ -209,12 +209,15 @@ describe('localStorage persistence (save and restore)', () => {
       {
         id: 'goal-1',
         title: 'Reduce car usage',
+        description: 'Cut weekly driving distance by 30%',
         category: 'transportation',
-        targetReductionPct: 30,
+        targetReductionPercent: 30,
+        targetKgCO2e: 500,
+        currentProgress: 0,
         deadline: '2024-12-31',
-        progress: 0,
         completed: false,
         createdAt: '2024-06-01T00:00:00.000Z',
+        weeklyCheckIns: [],
       },
     ];
 
