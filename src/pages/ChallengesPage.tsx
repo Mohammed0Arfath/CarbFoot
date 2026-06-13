@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useToast } from '@/components/Toast';
-import { ALL_CHALLENGES, ALL_BADGES, generateLeaderboard } from '@/data';
+import { ALL_CHALLENGES, generateLeaderboard } from '@/data';
 import type { Challenge, Badge } from '@/types';
 import { CATEGORY_LABELS, CATEGORY_ICONS, formatCO2Short } from '@/utils/formatting';
 

@@ -15,10 +15,12 @@ import type {
 // ── Safe number parsing ───────────────────────────────────────
 
 export function safeNumber(value: unknown, min: number, max: number, fallback: number): number {
+  if (value === null || value === undefined) return fallback;
   const n = Number(value);
   if (!isFinite(n) || isNaN(n)) return fallback;
   return Math.max(min, Math.min(max, n));
 }
+
 
 export function safeString<T extends string>(value: unknown, allowed: T[], fallback: T): T {
   if (allowed.includes(value as T)) return value as T;

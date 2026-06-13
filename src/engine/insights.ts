@@ -150,7 +150,6 @@ export function generateInsights(
   const sustainableTarget = 2000; // 2t CO₂e
   const gapToTarget = totalAnnualKgCO2e - sustainableTarget;
   if (gapToTarget > 0) {
-    const yearsAtRate = Math.round(gapToTarget / 300); // assumes 300kg/yr reduction
     insights.push({
       id: 'paris-gap',
       headline: `${(gapToTarget / 1000).toFixed(1)}t above the 2°C-compatible target`,

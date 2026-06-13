@@ -9,11 +9,6 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import {
-  calculateTransportationEmissions,
-  calculateEnergyEmissions,
-  calculateFoodEmissions,
-  calculateShoppingEmissions,
-  calculateWasteEmissions,
   computeEcoScore,
   getSustainabilityLevel,
 } from '@/engine/calculator';
@@ -43,7 +38,7 @@ interface ScenarioSlider {
 }
 
 function buildSliders(data: NonNullable<ReturnType<typeof useApp>['state']['assessmentData']>): ScenarioSlider[] {
-  return [
+  return ([
     {
       id: 'reduce-car-km',
       label: 'Reduce weekly car distance',
@@ -55,7 +50,7 @@ function buildSliders(data: NonNullable<ReturnType<typeof useApp>['state']['asse
       step: 5,
       unit: 'km/week less',
       defaultValue: 0,
-      applyFn: (kmReductionPerWeek, base) => {
+      applyFn: (kmReductionPerWeek: number) => {
         const annualReduction = kmReductionPerWeek * 52;
         const factor = data.transportation.fuelType === 'electric' ? 0.053
           : data.transportation.fuelType === 'hybrid' ? 0.120 : 0.192;
@@ -73,7 +68,7 @@ function buildSliders(data: NonNullable<ReturnType<typeof useApp>['state']['asse
       step: 1,
       unit: 'extra days/week',
       defaultValue: 0,
-      applyFn: (extraDays, base) => {
+      applyFn: (extraDays: number) => {
         const kmPerDay = data.transportation.commuteDistance * 2;
         const annualKm = extraDays * 52 * kmPerDay;
         const carFactor = data.transportation.fuelType === 'electric' ? 0.053 : 0.192;
@@ -92,7 +87,7 @@ function buildSliders(data: NonNullable<ReturnType<typeof useApp>['state']['asse
       step: 1,
       unit: 'fewer flights/year',
       defaultValue: 0,
-      applyFn: (fewerFlights) => -Math.round(fewerFlights * 5500 * 0.195),
+      applyFn: (fewerFlights: number) => -Math.round(fewerFlights * 5500 * 0.195),
     },
     {
       id: 'renewable-energy',
@@ -105,7 +100,7 @@ function buildSliders(data: NonNullable<ReturnType<typeof useApp>['state']['asse
       step: 10,
       unit: '% more renewable',
       defaultValue: 0,
-      applyFn: (extraRenewable, base) => {
+      applyFn: (extraRenewable: number) => {
         const annualKwh = data.energy.monthlyElectricityKwh * 12;
         return -Math.round(annualKwh * 0.462 * (extraRenewable / 100));
       },
@@ -121,7 +116,7 @@ function buildSliders(data: NonNullable<ReturnType<typeof useApp>['state']['asse
       step: 10,
       unit: 'kWh/month less',
       defaultValue: 0,
-      applyFn: (kwhReduction, base) => {
+      applyFn: (kwhReduction: number) => {
         const factor = 0.462 * (1 - data.energy.renewablePercentage / 100);
         return -Math.round(kwhReduction * 12 * factor);
       },
@@ -137,7 +132,7 @@ function buildSliders(data: NonNullable<ReturnType<typeof useApp>['state']['asse
       step: 1,
       unit: 'fewer meals/week',
       defaultValue: 0,
-      applyFn: (fewerMeals) => -Math.round(fewerMeals * 52 * 6.0),
+      applyFn: (fewerMeals: number) => -Math.round(fewerMeals * 52 * 6.0),
     },
     {
       id: 'diet-shift',
@@ -150,7 +145,7 @@ function buildSliders(data: NonNullable<ReturnType<typeof useApp>['state']['asse
       step: 10,
       unit: '% more plant-based',
       defaultValue: 0,
-      applyFn: (pct, base) => -Math.round(base * (pct / 100) * 0.4),
+      applyFn: (pct: number, base: number) => -Math.round(base * (pct / 100) * 0.4),
     },
     {
       id: 'reduce-fashion',
@@ -163,7 +158,7 @@ function buildSliders(data: NonNullable<ReturnType<typeof useApp>['state']['asse
       step: 1,
       unit: 'fewer items/month',
       defaultValue: 0,
-      applyFn: (fewerItems) => -Math.round(fewerItems * 12 * 10.0),
+      applyFn: (fewerItems: number) => -Math.round(fewerItems * 12 * 10.0),
     },
     {
       id: 'improve-recycling',
@@ -176,9 +171,9 @@ function buildSliders(data: NonNullable<ReturnType<typeof useApp>['state']['asse
       step: 10,
       unit: '% more recycled',
       defaultValue: 0,
-      applyFn: (extraPct, base) => -Math.round(base * (extraPct / 100) * 0.5),
+      applyFn: (extraPct: number, base: number) => -Math.round(base * (extraPct / 100) * 0.5),
     },
-  ].filter(s => s.max > 0); // Only show relevant sliders
+  ] as ScenarioSlider[]).filter(s => s.max > 0); // Only show relevant sliders
 }
 
 // ── Comparison Bar ────────────────────────────────────────────
