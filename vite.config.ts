@@ -22,6 +22,7 @@ export default defineConfig({
       include: [
         'src/engine/**/*.ts',
         'src/utils/**/*.ts',
+        'src/hooks/**/*.ts',
         'src/data/index.ts',
       ],
     },

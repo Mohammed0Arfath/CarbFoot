@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Chart as ChartJS,
@@ -8,17 +8,15 @@ import {
   BarElement, Filler,
 } from 'chart.js';
 import { Doughnut, Line, Bar } from 'react-chartjs-2';
-import { useApp } from '@/context/AppContext';
-import { generateRecommendations } from '@/engine/recommender';
-import { generateInsights } from '@/engine/insights';
 import {
-  formatCO2, formatCO2Short, formatMonth,
-  CATEGORY_LABELS, CATEGORY_COLORS, CATEGORY_ICONS,
-} from '@/utils/formatting';
+  useDashboard,
+  CHART_DEFAULTS, AXIS_STYLE, INSIGHT_TYPE_STYLES, GLOBAL_AVERAGES,
+} from '@/hooks/useDashboard';
+import { formatCO2, formatCO2Short, formatMonth, CATEGORY_LABELS, CATEGORY_ICONS, CATEGORY_COLORS } from '@/utils/formatting';
 import EcoScoreRing from '@/components/EcoScoreRing';
 import RecommendationCard from '@/components/RecommendationCard';
 import PrintReport from '@/components/PrintReport';
-import type { CategoryEmissions } from '@/types';
+import type { SustainabilityLevel } from '@/types';
 
 ChartJS.register(
   ArcElement, Tooltip, Legend,
@@ -27,68 +25,22 @@ ChartJS.register(
   BarElement, Filler,
 );
 
-const CHART_FONT = 'Inter, sans-serif';
 
-const CHART_DEFAULTS = {
-  plugins: {
-    legend: {
-      labels: {
-        color: '#8b949e',
-        font: { family: CHART_FONT, size: 12 },
-        boxWidth: 12,
-        padding: 16,
-      },
-    },
-    tooltip: {
-      backgroundColor: '#1a2030',
-      titleColor: '#f0f6fc',
-      bodyColor: '#8b949e',
-      borderColor: 'rgba(255,255,255,0.1)',
-      borderWidth: 1,
-      cornerRadius: 8,
-      padding: 12,
-    },
-  },
-};
-
-// Benchmark reference values (kg CO₂e/year)
-const GLOBAL_AVERAGES: CategoryEmissions = {
-  transportation: 1800,
-  energy:         1100,
-  food:           2000,
-  shopping:       600,
-  waste:          350,
-};
-
-const GLOBAL_TOTAL = Object.values(GLOBAL_AVERAGES).reduce((a, b) => a + b, 0); // 5850
-const EU_AVERAGE = 8400;      // kg CO₂e — EU average
-const SUSTAINABLE_TARGET = 2000; // kg CO₂e — 1.5°C-compatible
-
-const INSIGHT_TYPE_STYLES = {
-  warning:     { bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.25)', icon_color: '#f87171' },
-  opportunity: { bg: 'rgba(251,191,36,0.08)',  border: 'rgba(251,191,36,0.25)',  icon_color: '#fbbf24' },
-  positive:    { bg: 'rgba(74,222,128,0.08)',  border: 'rgba(74,222,128,0.25)',  icon_color: '#4ade80' },
-  info:        { bg: 'rgba(96,165,250,0.08)',  border: 'rgba(96,165,250,0.25)',  icon_color: '#60a5fa' },
-};
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { state } = useApp();
   const [showPrintReport, setShowPrintReport] = useState(false);
 
-  const { carbonResult, assessmentData, monthlyHistory } = state;
+  const {
+    isReady,
+    byCategory, totalAnnualKgCO2e, ecoScore, sustainabilityLevel, percentileRank,
+    monthlyHistory, categoryKeys, highestCategory, totalSavingsPossible, gapToTarget,
+    recommendations, insights,
+    donutData, lineData, barData,
+    benchmarks, maxBenchmark,
+  } = useDashboard();
 
-  const recommendations = useMemo(() => {
-    if (!assessmentData || !carbonResult) return [];
-    return generateRecommendations(assessmentData, carbonResult.byCategory, 8);
-  }, [assessmentData, carbonResult]);
-
-  const insights = useMemo(() => {
-    if (!assessmentData || !carbonResult) return [];
-    return generateInsights(carbonResult, assessmentData);
-  }, [assessmentData, carbonResult]);
-
-  if (!state.hasCompletedAssessment || !carbonResult) {
+  if (!isReady) {
     return (
       <main id="main-content" className="page">
         <div className="container" style={{ maxWidth: 600, textAlign: 'center', paddingTop: '4rem' }}>
@@ -108,98 +60,6 @@ export default function DashboardPage() {
       </main>
     );
   }
-
-  const { byCategory, totalAnnualKgCO2e, ecoScore, sustainabilityLevel, percentileRank } = carbonResult;
-
-  // ── Chart data ────────────────────────────────────────────
-
-  const categoryKeys = Object.keys(byCategory) as (keyof typeof byCategory)[];
-  const donutData = {
-    labels: categoryKeys.map(k => CATEGORY_LABELS[k]),
-    datasets: [{
-      data: categoryKeys.map(k => byCategory[k]),
-      backgroundColor: categoryKeys.map(k => CATEGORY_COLORS[k]),
-      borderColor: 'transparent',
-      hoverOffset: 6,
-    }],
-  };
-
-  const lineLabels = monthlyHistory.map(e => formatMonth(e.month));
-  const lineData = {
-    labels: lineLabels,
-    datasets: [{
-      label: 'Monthly CO₂e (kg)',
-      data: monthlyHistory.map(e => e.totalKgCO2e),
-      borderColor: '#10b981',
-      backgroundColor: 'rgba(16,185,129,0.08)',
-      fill: true,
-      tension: 0.4,
-      pointBackgroundColor: '#10b981',
-      pointRadius: 4,
-      pointHoverRadius: 6,
-    }],
-  };
-
-  const barData = {
-    labels: categoryKeys.map(k => CATEGORY_LABELS[k]),
-    datasets: [
-      {
-        label: 'Your footprint',
-        data: categoryKeys.map(k => byCategory[k]),
-        backgroundColor: categoryKeys.map(k => `${CATEGORY_COLORS[k]}cc`),
-        borderRadius: 6,
-      },
-      {
-        label: 'Global average',
-        data: categoryKeys.map(k => GLOBAL_AVERAGES[k]),
-        backgroundColor: 'rgba(139,148,158,0.2)',
-        borderRadius: 6,
-      },
-    ],
-  };
-
-  const axisStyle = {
-    ticks: { color: '#8b949e', font: { family: CHART_FONT, size: 11 } },
-    grid: { color: 'rgba(255,255,255,0.05)' },
-    border: { color: 'transparent' },
-  };
-
-  const highestCategory = categoryKeys.reduce((a, b) => byCategory[a] > byCategory[b] ? a : b);
-  const totalSavingsPossible = recommendations.reduce((s, r) => s + r.estimatedSavingKgCO2e, 0);
-
-  // ── Benchmarks ────────────────────────────────────────────
-  const benchmarks = [
-    {
-      label: 'Your Footprint',
-      value: totalAnnualKgCO2e,
-      color: totalAnnualKgCO2e > GLOBAL_TOTAL ? '#f87171' : '#4ade80',
-      bg: totalAnnualKgCO2e > GLOBAL_TOTAL ? 'rgba(248,113,113,0.08)' : 'rgba(74,222,128,0.08)',
-      icon: '📍',
-    },
-    {
-      label: 'Global Average',
-      value: GLOBAL_TOTAL,
-      color: '#fbbf24',
-      bg: 'rgba(251,191,36,0.08)',
-      icon: '🌍',
-    },
-    {
-      label: 'EU Average',
-      value: EU_AVERAGE,
-      color: '#fb923c',
-      bg: 'rgba(251,146,60,0.08)',
-      icon: '🇪🇺',
-    },
-    {
-      label: '1.5°C Target',
-      value: SUSTAINABLE_TARGET,
-      color: '#22d3ee',
-      bg: 'rgba(34,211,238,0.08)',
-      icon: '🎯',
-    },
-  ];
-
-  const maxBenchmark = Math.max(...benchmarks.map(b => b.value)) * 1.05;
 
   return (
     <main id="main-content" className="page">
@@ -346,10 +206,10 @@ export default function DashboardPage() {
               Emission Breakdown
             </h2>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
-              <EcoScoreRing score={ecoScore} level={sustainabilityLevel} size={160} />
+              <EcoScoreRing score={ecoScore} level={sustainabilityLevel as SustainabilityLevel} size={160} />
               <div className="chart-container" style={{ maxWidth: 220, margin: '0 auto' }}>
                 <Doughnut
-                  data={donutData}
+                  data={donutData as any}
                   options={{
                     ...CHART_DEFAULTS,
                     cutout: '65%',
@@ -408,17 +268,17 @@ export default function DashboardPage() {
             </h2>
             <div className="chart-container" style={{ height: 280 }}>
               <Line
-                data={lineData}
+                data={lineData as any}
                 options={{
                   ...CHART_DEFAULTS,
                   responsive: true,
                   maintainAspectRatio: false,
                   scales: {
-                    x: axisStyle,
+                    x: AXIS_STYLE,
                     y: {
-                      ...axisStyle,
+                      ...AXIS_STYLE,
                       ticks: {
-                        ...axisStyle.ticks,
+                        ...AXIS_STYLE.ticks,
                         callback: (v) => formatCO2Short(v as number),
                       },
                     },
@@ -539,7 +399,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Gap to target message */}
-          {totalAnnualKgCO2e > SUSTAINABLE_TARGET && (
+          {gapToTarget > 0 && (
             <div
               style={{
                 marginTop: '1.25rem',
@@ -556,7 +416,7 @@ export default function DashboardPage() {
               <span style={{ color: 'var(--text-secondary)' }}>
                 You need to reduce by{' '}
                 <strong style={{ color: 'var(--text-primary)' }}>
-                  {formatCO2(totalAnnualKgCO2e - SUSTAINABLE_TARGET)}
+                  {formatCO2(gapToTarget)}
                 </strong>
                 {' '}to reach the Paris Agreement sustainable level.{' '}
                 <button
@@ -587,17 +447,17 @@ export default function DashboardPage() {
           </p>
           <div className="chart-container" style={{ height: 240 }}>
             <Bar
-              data={barData}
+              data={barData as any}
               options={{
                 ...CHART_DEFAULTS,
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                  x: axisStyle,
+                  x: AXIS_STYLE,
                   y: {
-                    ...axisStyle,
+                    ...AXIS_STYLE,
                     ticks: {
-                      ...axisStyle.ticks,
+                      ...AXIS_STYLE.ticks,
                       callback: (v) => formatCO2Short(v as number),
                     },
                   },

@@ -61,15 +61,23 @@ graph TD
     E --> E5[GoalsPage]
     E --> E6[ChallengesPage]
 
-    B --> F[Engine — Pure TS, no React deps]
+    B --> H[Hooks — React data layer]
+    H --> H1[useDashboard.ts]
+    H --> H2[useGoals.ts]
+
+    B --> F[Engine — Pure TS, zero React deps]
     F --> F1[calculator.ts]
     F --> F2[recommender.ts]
     F --> F3[insights.ts]
+    F --> F4[simulator.ts]
 
+    E3 --> H1
+    E5 --> H2
+    H1 --> F2
+    H1 --> F3
+    H2 --> F1
     E2 --> F1
-    E3 --> F1
-    E3 --> F2
-    E3 --> F3
+    E4 --> F4
     E4 --> F1
 
     B --> G[Components]

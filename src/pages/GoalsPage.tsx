@@ -1,21 +1,14 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
-import { useToast } from '@/components/Toast';
 import type { Goal } from '@/types';
 import {
   formatCO2, formatCO2Short, formatDate,
-  CATEGORY_LABELS, CATEGORY_ICONS, generateId,
+  CATEGORY_ICONS,
 } from '@/utils/formatting';
-
-const GOAL_TEMPLATES = [
-  { title: 'Reduce transport emissions', category: 'transportation' as const, target: 20, icon: '🚗' },
-  { title: 'Switch to renewable energy', category: 'energy' as const, target: 50, icon: '⚡' },
-  { title: 'Adopt plant-rich diet',      category: 'food' as const,          target: 30, icon: '🥗' },
-  { title: 'Cut shopping footprint',     category: 'shopping' as const,       target: 25, icon: '🛍️' },
-  { title: 'Zero waste practices',       category: 'waste' as const,          target: 40, icon: '♻️' },
-  { title: 'Overall 20% reduction',     category: 'overall' as const,         target: 20, icon: '🌍' },
-];
+import {
+  GOAL_TEMPLATES, buildGoal, validateGoalForm, applyProgressDelta, useGoals,
+} from '@/hooks/useGoals';
 
 function AddGoalModal({
   onClose, onAdd, carbonResult,
@@ -30,16 +23,6 @@ function AddGoalModal({
   const [deadlineDays, setDeadlineDays] = useState(90);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const validate = () => {
-    const e: Record<string, string> = {};
-    if (!title.trim()) e.title = 'Goal title is required';
-    if (title.trim().length > 100) e.title = 'Title must be under 100 characters';
-    if (targetPercent < 1 || targetPercent > 100) e.target = 'Target must be 1–100%';
-    if (deadlineDays < 7 || deadlineDays > 365) e.deadline = 'Deadline must be 7–365 days';
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
-
   const baseEmissions = category === 'overall'
     ? carbonResult.totalAnnualKgCO2e
     : carbonResult.byCategory[category as keyof typeof carbonResult.byCategory] ?? carbonResult.totalAnnualKgCO2e;
@@ -49,20 +32,10 @@ function AddGoalModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
-    onAdd({
-      id: generateId(),
-      title: title.trim(),
-      description: `Reduce ${category === 'overall' ? 'total' : CATEGORY_LABELS[category]} emissions by ${targetPercent}%`,
-      category,
-      targetReductionPercent: targetPercent,
-      targetKgCO2e: targetKg,
-      currentProgress: 0,
-      createdAt: new Date().toISOString(),
-      deadline,
-      completed: false,
-      weeklyCheckIns: [],
-    });
+    const validationErrors = validateGoalForm(title, targetPercent, deadlineDays);
+    setErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) return;
+    onAdd(buildGoal(title, category, targetPercent, deadlineDays, carbonResult));
   };
 
   return (
@@ -210,20 +183,7 @@ function GoalCard({ goal, onUpdate, onDelete }: {
   const cat = goal.category === 'overall' ? null : goal.category;
 
   const handleProgressUpdate = (delta: number) => {
-    const newProgress = Math.min(100, Math.max(0, goal.currentProgress + delta));
-    const completed = newProgress >= 100;
-    onUpdate({
-      ...goal,
-      currentProgress: newProgress,
-      completed,
-      weeklyCheckIns: [
-        ...goal.weeklyCheckIns,
-        {
-          week: new Date().toISOString().slice(0, 10),
-          progressDelta: delta,
-        },
-      ],
-    });
+    onUpdate(applyProgressDelta(goal, delta));
   };
 
   return (
@@ -324,27 +284,15 @@ function GoalCard({ goal, onUpdate, onDelete }: {
 
 export default function GoalsPage() {
   const navigate = useNavigate();
-  const { state, addGoal, updateGoal, deleteGoal } = useApp();
-  const { showToast } = useToast();
+  const { state } = useApp();
   const [showModal, setShowModal] = useState(false);
 
-  const handleAddGoal = useCallback((goal: Goal) => {
-    addGoal(goal);
+  const { stats, handleAddGoal, handleUpdateGoal, handleDeleteGoal } = useGoals();
+
+  const wrappedAddGoal = (goal: Goal) => {
+    handleAddGoal(goal);
     setShowModal(false);
-    showToast('Goal created! Track your progress weekly.', 'success', '🎯');
-  }, [addGoal, showToast]);
-
-  const handleUpdateGoal = useCallback((goal: Goal) => {
-    updateGoal(goal);
-    if (goal.completed) {
-      showToast(`🎉 "${goal.title}" completed! Amazing work!`, 'success', '🏆');
-    }
-  }, [updateGoal, showToast]);
-
-  const handleDeleteGoal = useCallback((id: string) => {
-    deleteGoal(id);
-    showToast('Goal removed.', 'info');
-  }, [deleteGoal, showToast]);
+  };
 
   if (!state.hasCompletedAssessment || !state.carbonResult) {
     return (
@@ -363,9 +311,9 @@ export default function GoalsPage() {
     );
   }
 
-  const active = state.goals.filter(g => !g.completed);
-  const completed = state.goals.filter(g => g.completed);
-  const totalSaved = completed.reduce((s, g) => s + g.targetKgCO2e, 0);
+  const active = stats.active;
+  const completed = stats.completed;
+  const totalSaved = stats.totalSaved;
 
   return (
     <main id="main-content" className="page">
@@ -405,9 +353,7 @@ export default function GoalsPage() {
             <div className="stat-card">
               <div className="stat-label">Completion Rate</div>
               <div className="stat-value">
-                {state.goals.length > 0
-                  ? `${Math.round((completed.length / state.goals.length) * 100)}%`
-                  : '—'}
+                {state.goals.length > 0 ? `${stats.completionRate}%` : '—'}
               </div>
             </div>
           </div>
@@ -474,7 +420,7 @@ export default function GoalsPage() {
       {showModal && state.carbonResult && (
         <AddGoalModal
           onClose={() => setShowModal(false)}
-          onAdd={handleAddGoal}
+          onAdd={wrappedAddGoal}
           carbonResult={state.carbonResult}
         />
       )}

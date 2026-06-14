@@ -226,7 +226,7 @@ describe('localStorage persistence (save and restore)', () => {
 
     expect(retrieved.goals).toHaveLength(1);
     expect(retrieved.goals[0].title).toBe('Reduce car usage');
-    expect(retrieved.goals[0].targetReductionPct).toBe(30);
+    expect(retrieved.goals[0].targetReductionPercent).toBe(30);
   });
 
   it('preserves user profile badge state across save/restore', () => {
